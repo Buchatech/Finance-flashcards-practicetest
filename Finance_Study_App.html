@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance — Study App</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a1200;
+    --dark: #2a1f00;
+    --gold: #d4a017;
+    --gold2: #f0c040;
+    --sky: #3d8bcd;
+    --cream: #faf7f0;
+    --light: #fdf6e0;
+    --white: #ffffff;
+    --green: #2a7a4b;
+    --red: #c0392b;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --border: #dde3ed;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .app-header {
+    background: var(--dark);
+    padding: 20px 32px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(212,160,23,0.2);
+  }
+  .app-title { font-family: 'Playfair Display', serif; color: var(--gold2); font-size: 1.3rem; letter-spacing: -0.02em; }
+  .app-subtitle { color: rgba(255,255,255,0.45); font-size: 0.75rem; margin-top: 2px; }
+  .mode-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mode-btn {
+    padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(212,160,23,0.25);
+    background: transparent; color: rgba(255,255,255,0.6); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
+  }
+  .mode-btn.active { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 700; }
+  .mode-btn:hover:not(.active) { background: rgba(212,160,23,0.1); color: white; }
+
+  /* MAIN */
+  .main { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+
+  /* MODULE FILTER */
+  .module-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+  .mod-btn {
+    padding: 6px 14px; border-radius: 16px; border: 1.5px solid rgba(212,160,23,0.2);
+    background: transparent; color: rgba(255,255,255,0.5); cursor: pointer;
+    font-size: 0.78rem; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.18s;
+  }
+  .mod-btn.on { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 700; }
+  .mod-btn:hover:not(.on) { border-color: var(--gold); color: rgba(255,255,255,0.85); }
+
+  /* FLASHCARD */
+  #flashcard-view { display: none; }
+  .fc-progress-bar { background: rgba(255,255,255,0.1); border-radius: 4px; height: 4px; margin-bottom: 20px; }
+  .fc-progress-fill { height: 4px; background: var(--gold); border-radius: 4px; transition: width 0.4s ease; }
+  .fc-counter { color: rgba(255,255,255,0.4); font-size: 0.8rem; text-align: center; margin-bottom: 18px; }
+  .card-scene { perspective: 1200px; width: 100%; max-width: 680px; margin: 0 auto; height: 320px; cursor: pointer; }
+  .card-3d { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4,0,0.2,1); position: relative; }
+  .card-3d.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+    border-radius: 20px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 36px; text-align: center; user-select: none;
+  }
+  .card-front { background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3); }
+  .card-back { background: linear-gradient(135deg, #3a2800 0%, #1a1200 100%); transform: rotateY(180deg); box-shadow: 0 20px 60px rgba(0,0,0,0.6); border: 1px solid rgba(212,160,23,0.3); }
+  .card-tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; }
+  .card-front .card-tag { color: var(--gold); }
+  .card-back .card-tag { color: var(--gold2); }
+  .card-question { font-family: 'Playfair Display', serif; font-size: 1.45rem; line-height: 1.3; color: var(--navy); }
+  .card-answer { font-size: 1rem; line-height: 1.55; color: rgba(255,255,255,0.88); font-weight: 400; }
+  .card-hint { font-size: 0.75rem; color: var(--muted); margin-top: 12px; }
+  .card-back .card-hint { color: rgba(255,255,255,0.35); }
+  .formula-tag { font-family: 'DM Mono', monospace; background: rgba(212,160,23,0.15); border: 1px solid rgba(212,160,23,0.3); padding: 6px 14px; border-radius: 8px; font-size: 0.88rem; color: var(--gold2); margin-top: 12px; display: inline-block; }
+  .fc-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 28px; }
+  .fc-btn { padding: 12px 28px; border-radius: 40px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; transition: all 0.18s; }
+  .btn-prev { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); }
+  .btn-prev:hover { background: rgba(255,255,255,0.12); }
+  .btn-next { background: var(--gold); color: var(--navy); }
+  .btn-next:hover { background: var(--gold2); transform: translateY(-1px); }
+  .btn-flip { background: rgba(61,139,205,0.8); color: white; }
+  .btn-flip:hover { background: #3d8bcd; }
+  .btn-shuffle { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); padding: 12px 18px; border-radius: 40px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; transition: all 0.18s; }
+  .btn-shuffle:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  /* QUIZ */
+  #quiz-view { display: none; }
+  .quiz-start { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,23,0.15); border-radius: 20px; padding: 48px; text-align: center; }
+  .quiz-start h2 { font-family: 'Playfair Display', serif; color: var(--gold2); font-size: 2rem; margin-bottom: 12px; }
+  .quiz-start p { color: rgba(255,255,255,0.5); font-size: 0.95rem; margin-bottom: 32px; line-height: 1.6; }
+  .quiz-config { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+  .config-chip { padding: 8px 16px; border-radius: 20px; border: 1.5px solid rgba(212,160,23,0.2); background: transparent; color: rgba(255,255,255,0.55); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; transition: all 0.18s; }
+  .config-chip.sel { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 700; }
+  .btn-start { background: var(--gold); color: var(--navy); border: none; border-radius: 40px; padding: 14px 40px; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.18s; }
+  .btn-start:hover { background: var(--gold2); transform: translateY(-1px); }
+  .quiz-question-block { display: none; }
+  .quiz-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .quiz-num { color: rgba(255,255,255,0.4); font-size: 0.82rem; }
+  .quiz-score-badge { background: var(--green); color: white; border-radius: 20px; padding: 4px 14px; font-size: 0.8rem; font-weight: 600; }
+  .quiz-progress-bar { background: rgba(255,255,255,0.08); border-radius: 4px; height: 3px; margin-bottom: 28px; }
+  .quiz-progress-fill { height: 3px; background: var(--gold); border-radius: 4px; transition: width 0.3s; }
+  .quiz-q-card { background: white; border-radius: 18px; padding: 32px; margin-bottom: 20px; }
+  .quiz-module-tag { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+  .quiz-q-text { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--navy); line-height: 1.4; }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .option-btn { background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 14px 18px; color: rgba(255,255,255,0.82); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; line-height: 1.4; text-align: left; transition: all 0.18s; }
+  .option-btn:hover:not(:disabled) { background: rgba(212,160,23,0.1); border-color: var(--gold); color: white; }
+  .option-btn.correct { background: rgba(42,122,75,0.25) !important; border-color: var(--green) !important; color: #6ddb9a !important; }
+  .option-btn.wrong { background: rgba(192,57,43,0.22) !important; border-color: var(--red) !important; color: #f08080 !important; }
+  .option-btn:disabled { cursor: default; }
+  .option-label { font-weight: 700; margin-right: 8px; color: var(--gold); }
+  .quiz-feedback { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: none; font-size: 0.9rem; line-height: 1.5; }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { border-left: 3px solid var(--green); color: #a0f0c0; }
+  .quiz-feedback.wrong { border-left: 3px solid var(--red); color: #ffb3b3; }
+  .btn-next-q { background: var(--gold); color: var(--navy); border: none; border-radius: 40px; padding: 12px 32px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: none; transition: all 0.18s; }
+  .btn-next-q.show { display: inline-block; }
+  .btn-next-q:hover { background: var(--gold2); }
+  .quiz-results { display: none; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,23,0.15); border-radius: 20px; padding: 48px; text-align: center; }
+  .results-score { font-family: 'Playfair Display', serif; font-size: 4rem; font-weight: 900; color: var(--gold); margin-bottom: 8px; }
+  .results-label { color: rgba(255,255,255,0.5); font-size: 1rem; margin-bottom: 28px; }
+  .results-breakdown { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+  .result-chip { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 14px 20px; min-width: 120px; }
+  .result-chip-num { font-size: 1.6rem; font-weight: 700; color: white; }
+  .result-chip-lbl { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+  .review-list { text-align: left; margin-bottom: 28px; max-height: 280px; overflow-y: auto; }
+  .review-item { background: rgba(192,57,43,0.1); border-left: 3px solid var(--red); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 8px; }
+  .review-item-q { font-size: 0.88rem; color: rgba(255,255,255,0.78); margin-bottom: 4px; }
+  .review-item-a { font-size: 0.82rem; color: #a0f0c0; }
+  .btn-retake { background: var(--gold); color: var(--navy); border: none; border-radius: 40px; padding: 13px 36px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-right: 10px; transition: all 0.18s; }
+  .btn-retake:hover { background: var(--gold2); }
+  .btn-fc-after { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.65); border: none; border-radius: 40px; padding: 13px 30px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; transition: all 0.18s; }
+  .btn-fc-after:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  /* STUDY SHEET */
+  #cheatsheet-view { display: none; }
+  .cs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .cs-title { font-family: 'Playfair Display', serif; color: var(--gold2); font-size: 1.5rem; }
+  .cs-print-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(212,160,23,0.2); color: rgba(255,255,255,0.65); border-radius: 20px; padding: 8px 18px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; transition: all 0.18s; }
+  .cs-print-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+  .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .cs-panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(212,160,23,0.12); border-radius: 16px; overflow: hidden; }
+  .cs-panel.full-width { grid-column: 1 / -1; }
+  .cs-panel-header { padding: 12px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .cs-panel-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cs-panel-title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+  .cs-panel-body { padding: 14px 18px; }
+  .cs-term-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: baseline; }
+  .cs-term-row:last-child { border-bottom: none; }
+  .cs-term { font-weight: 600; font-size: 0.82rem; color: white; min-width: 150px; flex-shrink: 0; line-height: 1.4; }
+  .cs-def { font-size: 0.8rem; color: rgba(255,255,255,0.58); line-height: 1.45; }
+  .cs-formula-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cs-formula-box { background: rgba(212,160,23,0.07); border: 1px solid rgba(212,160,23,0.2); border-radius: 10px; padding: 10px 14px; }
+  .cs-formula-label { font-size: 0.7rem; color: rgba(255,255,255,0.38); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .cs-formula-val { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--gold2); line-height: 1.5; }
+  .cs-table { width: 100%; border-collapse: collapse; }
+  .cs-table th { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.38); text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .cs-table td { font-size: 0.8rem; color: rgba(255,255,255,0.68); padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; line-height: 1.4; }
+  .cs-table tr:last-child td { border-bottom: none; }
+  .cs-table td:first-child { font-weight: 600; color: white; width: 36%; }
+  .cs-section-divider { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(212,160,23,0.5); margin: 10px 0 6px; }
+
+  @media (max-width: 680px) {
+    .cs-grid { grid-template-columns: 1fr; }
+    .cs-panel.full-width { grid-column: auto; }
+    .cs-formula-grid { grid-template-columns: 1fr; }
+    .options-grid { grid-template-columns: 1fr; }
+    .card-scene { height: 280px; }
+    .results-breakdown { flex-direction: column; align-items: center; }
+    .app-header { flex-direction: column; gap: 12px; padding: 16px; }
+    .mode-tabs { justify-content: center; }
+  }
+
+  @media print {
+    body { background: white !important; }
+    .app-header, .module-bar, .cs-print-btn { display: none !important; }
+    #cheatsheet-view { display: block !important; }
+    #flashcard-view, #quiz-view { display: none !important; }
+    .cs-panel { border: 1px solid #ddd !important; background: white !important; break-inside: avoid; }
+    .cs-panel-title, .cs-section-divider { color: #888 !important; }
+    .cs-term { color: #1a1200 !important; }
+    .cs-def { color: #444 !important; }
+    .cs-table td { color: #333 !important; }
+    .cs-table td:first-child { color: #1a1200 !important; }
+    .cs-formula-val { color: #b8860b !important; }
+    .cs-formula-box { background: #fffbef !important; border: 1px solid #e0c060 !important; }
+    .main { padding: 0 !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <div class="app-title">Finance</div>
+    <div class="app-subtitle">EMBA Study App — Pages 53–67</div>
+  </div>
+  <div class="mode-tabs">
+    <button class="mode-btn active" onclick="setMode('flashcard')">&#9632; Flashcards</button>
+    <button class="mode-btn" onclick="setMode('quiz')">&#9654; Practice Test</button>
+    <button class="mode-btn" onclick="setMode('cheatsheet')">&#9783; Study Sheet</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="module-bar" id="moduleBar">
+    <button class="mod-btn on" onclick="toggleModule(this,'all')" data-mod="all">All Modules</button>
+    <button class="mod-btn" onclick="toggleModule(this,'tvm')" data-mod="tvm">Time Value of Money</button>
+    <button class="mod-btn" onclick="toggleModule(this,'corp')" data-mod="corp">Corporate Finance</button>
+    <button class="mod-btn" onclick="toggleModule(this,'wacc')" data-mod="wacc">Cost of Capital & WACC</button>
+    <button class="mod-btn" onclick="toggleModule(this,'budget')" data-mod="budget">Capital Budgeting</button>
+    <button class="mod-btn" onclick="toggleModule(this,'value')" data-mod="value">Value Creation</button>
+  </div>
+
+  <!-- FLASHCARD VIEW -->
+  <div id="flashcard-view">
+    <div class="fc-progress-bar"><div class="fc-progress-fill" id="fcProgressFill"></div></div>
+    <div class="fc-counter" id="fcCounter"></div>
+    <div class="card-scene" onclick="flipCard()">
+      <div class="card-3d" id="card3d">
+        <div class="card-face card-front">
+          <div class="card-tag" id="fcModule">Module</div>
+          <div class="card-question" id="fcQuestion">Question text</div>
+          <div class="card-hint" id="fcHint">Tap to reveal answer</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-tag">Answer</div>
+          <div class="card-answer" id="fcAnswer">Answer text</div>
+          <div class="formula-tag" id="fcFormula" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-controls">
+      <button class="btn-shuffle" onclick="shuffleCards()">&#x21C4; Shuffle</button>
+      <button class="fc-btn btn-prev" onclick="prevCard()">&#8592; Prev</button>
+      <button class="fc-btn btn-flip" onclick="flipCard()">Flip Card</button>
+      <button class="fc-btn btn-next" onclick="nextCard()">Next &#8594;</button>
+    </div>
+  </div>
+
+  <!-- QUIZ VIEW -->
+  <div id="quiz-view">
+    <div class="quiz-start" id="quizStart">
+      <h2>Practice Test</h2>
+      <p>Test your knowledge across all Finance modules. Multiple choice with immediate feedback and a missed-question review at the end.</p>
+      <div class="quiz-config">
+        <button class="config-chip sel" data-n="10" onclick="selectN(this)">10 Questions</button>
+        <button class="config-chip" data-n="20" onclick="selectN(this)">20 Questions</button>
+        <button class="config-chip" data-n="all" onclick="selectN(this)">Full Test</button>
+      </div>
+      <button class="btn-start" onclick="startQuiz()">Start Test</button>
+    </div>
+    <div class="quiz-question-block" id="quizBlock">
+      <div class="quiz-hdr">
+        <div class="quiz-num" id="quizNum">Question 1 of 20</div>
+        <div class="quiz-score-badge" id="quizScoreBadge">Score: 0</div>
+      </div>
+      <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
+      <div class="quiz-q-card">
+        <div class="quiz-module-tag" id="qModuleTag"></div>
+        <div class="quiz-q-text" id="qText"></div>
+      </div>
+      <div class="options-grid" id="optionsGrid"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <button class="btn-next-q" id="btnNextQ" onclick="nextQuestion()">Next Question →</button>
+    </div>
+    <div class="quiz-results" id="quizResults">
+      <div class="results-score" id="resultsPct"></div>
+      <div class="results-label" id="resultsLabel"></div>
+      <div class="results-breakdown" id="resultsBreakdown"></div>
+      <div id="reviewSection"></div>
+      <button class="btn-retake" onclick="retakeQuiz()">↺ Retake Test</button>
+      <button class="btn-fc-after" onclick="setMode('flashcard')">Review Flashcards</button>
+    </div>
+  </div>
+
+  <!-- STUDY SHEET -->
+  <div id="cheatsheet-view">
+    <div class="cs-header">
+      <div class="cs-title">Quick Reference Study Sheet</div>
+      <button class="cs-print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+    </div>
+    <div class="cs-grid">
+
+      <!-- MASTER FORMULAS -->
+      <div class="cs-panel full-width">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#d4a017"></div><div class="cs-panel-title">Master Formula Sheet</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-formula-grid">
+            <div class="cs-formula-box"><div class="cs-formula-label">Future Value</div><div class="cs-formula-val">FV = C₀ × (1 + r)ⁿ</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Present Value</div><div class="cs-formula-val">PV = Cₙ / (1 + r)ⁿ</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Net Present Value</div><div class="cs-formula-val">NPV = PV(benefits) − PV(costs)</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">WACC</div><div class="cs-formula-val">WACC = (Wₑ × Rₑ) + (W_d × R_d × (1−T))</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">CAPM (Cost of Equity)</div><div class="cs-formula-val">Rₑ = r_f + β × (r_m − r_f)</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">After-Tax Cost of Debt</div><div class="cs-formula-val">C_at = C_bt × (1 − T)</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Effective Tax Rate</div><div class="cs-formula-val">= Tax Expense / Earnings Before Tax</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Cost of Debt (Before Tax)</div><div class="cs-formula-val">= Interest Expense / Debt</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Investment Rate</div><div class="cs-formula-val">= Growth Rate / ROIC</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Market Cap</div><div class="cs-formula-val">= Price per Share × Number of Shares</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Debt % of Capital</div><div class="cs-formula-val">= Debt / (Debt + Equity)</div></div>
+            <div class="cs-formula-box"><div class="cs-formula-label">Equity % of Capital</div><div class="cs-formula-val">= Equity / (Debt + Equity)</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIME VALUE OF MONEY -->
+      <div class="cs-panel">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#3d8bcd"></div><div class="cs-panel-title">Time Value of Money</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-term-row"><div class="cs-term">Time Value of Money</div><div class="cs-def">A dollar today is worth more than a dollar in the future — it can be invested to earn a return</div></div>
+          <div class="cs-term-row"><div class="cs-term">Present Value (PV)</div><div class="cs-def">The value of a future sum of money in today's dollars. Moves money backward in time (discounting)</div></div>
+          <div class="cs-term-row"><div class="cs-term">Future Value (FV)</div><div class="cs-def">The value of a current sum at a specific future date. Moves money forward in time (compounding)</div></div>
+          <div class="cs-term-row"><div class="cs-term">Compounding</div><div class="cs-def">Growing money forward by applying the rate of return — multiplication. Calculates FV</div></div>
+          <div class="cs-term-row"><div class="cs-term">Discounting</div><div class="cs-def">Shrinking future money back to today's value — division. Calculates PV</div></div>
+          <div class="cs-term-row"><div class="cs-term">Discount Rate (r)</div><div class="cs-def">The return expected from an investment — used in discounting. Often set equal to WACC</div></div>
+          <div class="cs-term-row"><div class="cs-term">Timeline</div><div class="cs-def">Visual tool for TVM scenarios. Cash inflows are positive; outflows are negative. Periods must be equal</div></div>
+          <div class="cs-term-row"><div class="cs-term">Annuity Due</div><div class="cs-def">Payments made at the BEGINNING of each period</div></div>
+          <div class="cs-term-row"><div class="cs-term">Ordinary Annuity</div><div class="cs-def">Payments made at the END of each period (most common)</div></div>
+          <div class="cs-term-row"><div class="cs-term">NPV Rule</div><div class="cs-def">Invest in all independent projects with NPV > 0. For mutually exclusive projects, choose highest NPV</div></div>
+        </div>
+      </div>
+
+      <!-- CORPORATE FINANCE & RISK -->
+      <div class="cs-panel">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#2a7a4b"></div><div class="cs-panel-title">Corporate Finance & Risk</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-section-divider">Key Roles</div>
+          <div class="cs-term-row"><div class="cs-term">Corporate Finance</div><div class="cs-def">Sourcing and allocating funds for a corporation — short and long term</div></div>
+          <div class="cs-term-row"><div class="cs-term">CFO</div><div class="cs-def">Head of finance — manages fiscal functions, monitors financial assets, develops forward-looking strategy</div></div>
+          <div class="cs-term-row"><div class="cs-term">Shareholders</div><div class="cs-def">Own common stock; vote on major company matters; primary goal = maximizing wealth</div></div>
+          <div class="cs-section-divider">Risk Management</div>
+          <div class="cs-term-row"><div class="cs-term">Risk</div><div class="cs-def">Probability of a deviation from the anticipated outcome. Goal of risk management: increase firm value</div></div>
+          <div class="cs-term-row"><div class="cs-term">Risk Threshold</div><div class="cs-def">The amount of risk a firm will tolerate — must be balanced against materiality (cost vs. benefit)</div></div>
+          <div class="cs-term-row"><div class="cs-term">Capital Market</div><div class="cs-def">Where corporations and institutions trade financial instruments to fund long-term growth</div></div>
+          <div class="cs-term-row"><div class="cs-term">Primary Market</div><div class="cs-def">Where new securities are issued directly by corporations to institutional investors (IPO)</div></div>
+          <div class="cs-term-row"><div class="cs-term">Secondary Market</div><div class="cs-def">Where existing shareholders trade securities with other investors (e.g., NYSE, NASDAQ)</div></div>
+          <div class="cs-term-row"><div class="cs-term">SWOT Analysis</div><div class="cs-def">Strengths, Weaknesses, Opportunities, Threats — framework for assessing competitive position</div></div>
+          <div class="cs-term-row"><div class="cs-term">SMART Goals</div><div class="cs-def">Specific, Measurable, Achievable, Relevant, Timely</div></div>
+        </div>
+      </div>
+
+      <!-- COST OF CAPITAL & WACC -->
+      <div class="cs-panel full-width">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#d4a017"></div><div class="cs-panel-title">Cost of Capital, CAPM & WACC</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-formula-grid">
+            <div>
+              <div class="cs-section-divider">Cost of Debt</div>
+              <div class="cs-term-row"><div class="cs-term">Cost of Debt</div><div class="cs-def">Effective interest rate a company pays on borrowed funds = Interest Expense / Debt</div></div>
+              <div class="cs-term-row"><div class="cs-term">After-Tax Cost of Debt</div><div class="cs-def">C_bt × (1 − T). Interest is tax-deductible, reducing the true cost. Dividends are NOT tax-deductible</div></div>
+              <div class="cs-term-row"><div class="cs-term">Risk-Free Rate (r_f)</div><div class="cs-def">Minimum return investors accept for zero-risk lending. Equated to US Treasury bond yields</div></div>
+              <div class="cs-term-row"><div class="cs-term">Credit Risk</div><div class="cs-def">Risk that borrower defaults. Higher credit risk → higher cost of debt. Mitigated by collateral</div></div>
+              <div class="cs-section-divider">Cost of Equity & CAPM</div>
+              <div class="cs-term-row"><div class="cs-term">Cost of Equity</div><div class="cs-def">Minimum return stockholders require before investing. Higher than cost of debt due to greater risk</div></div>
+              <div class="cs-term-row"><div class="cs-term">CAPM</div><div class="cs-def">Capital Asset Pricing Model — estimates cost of equity: Rₑ = r_f + β × (r_m − r_f)</div></div>
+              <div class="cs-term-row"><div class="cs-term">Beta (β)</div><div class="cs-def">Measures stock volatility relative to the overall market. β &gt; 1 = more volatile than market</div></div>
+              <div class="cs-term-row"><div class="cs-term">Market Risk Premium</div><div class="cs-def">(r_m − r_f) — the extra return investors expect for taking on market risk vs. risk-free rate</div></div>
+            </div>
+            <div>
+              <div class="cs-section-divider">WACC & Capital Structure</div>
+              <div class="cs-term-row"><div class="cs-term">Capital Structure</div><div class="cs-def">The balance between debt and equity funding. High debt = highly leveraged</div></div>
+              <div class="cs-term-row"><div class="cs-term">WACC</div><div class="cs-def">Weighted Average Cost of Capital — blended cost of all capital. A company must earn ROIC &gt; WACC to create value</div></div>
+              <div class="cs-term-row"><div class="cs-term">Tax Shield</div><div class="cs-def">Reduction in tax expense from deducting interest payments. More debt = greater tax shield</div></div>
+              <div class="cs-term-row"><div class="cs-term">Distress Costs</div><div class="cs-def">Extra costs when a firm faces financial trouble — higher cost of capital, lost customers, talent loss</div></div>
+              <div class="cs-section-divider">Modigliani-Miller Propositions</div>
+              <div class="cs-term-row"><div class="cs-term">MM (No Taxes)</div><div class="cs-def">Prop I: D/E ratio is irrelevant to firm value. Prop II: WACC unaffected by capital structure</div></div>
+              <div class="cs-term-row"><div class="cs-term">MM (With Taxes)</div><div class="cs-def">Prop I: Firm value maximized with maximum debt. Prop II: WACC minimized with all-debt structure</div></div>
+              <div class="cs-term-row"><div class="cs-term">MM (Taxes + Bankruptcy)</div><div class="cs-def">Optimal structure: weighted cost of debt = weighted cost of equity. Balances tax shield vs. distress costs</div></div>
+              <div class="cs-term-row"><div class="cs-term">Levered vs. Unlevered</div><div class="cs-def">Levered (geared): mix of debt + equity. Unlevered (ungeared): funded solely by equity</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAPITAL BUDGETING -->
+      <div class="cs-panel">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#c0392b"></div><div class="cs-panel-title">Capital Budgeting</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-term-row"><div class="cs-term">Capital Budgeting</div><div class="cs-def">Using DCF analysis to determine which long-term investments are the best use of capital</div></div>
+          <div class="cs-term-row"><div class="cs-term">NPV Rule</div><div class="cs-def">Invest in all independent projects with positive NPV. For mutually exclusive projects, choose highest NPV</div></div>
+          <div class="cs-term-row"><div class="cs-term">IRR</div><div class="cs-def">Internal Rate of Return — the discount rate that makes NPV = $0. If IRR &gt; required rate, NPV is positive</div></div>
+          <div class="cs-term-row"><div class="cs-term">Payback Period</div><div class="cs-def">Time to recoup the initial investment. Simple but ignores time value of money — not a primary metric</div></div>
+          <div class="cs-term-row"><div class="cs-term">Sunk Cost</div><div class="cs-def">Past costs already spent and unrecoverable — always irrelevant to capital budgeting decisions</div></div>
+          <div class="cs-term-row"><div class="cs-term">Salvage Value</div><div class="cs-def">Resale value of project's assets at end of useful life — included in final period cash flows</div></div>
+          <div class="cs-term-row"><div class="cs-term">Marginal Cash Flows</div><div class="cs-def">Future cash flows resulting from moving forward with a project</div></div>
+          <div class="cs-term-row"><div class="cs-term">Incremental Cash Flows</div><div class="cs-def">Cash flows that occur ONLY IF the project is chosen — the relevant flows for NPV</div></div>
+          <div class="cs-term-row"><div class="cs-term">Depreciation Treatment</div><div class="cs-def">Included to calculate tax expense (reduces taxable income), then added back as a non-cash item</div></div>
+          <div class="cs-section-divider">Uncertainty Tools</div>
+          <div class="cs-term-row"><div class="cs-term">Sensitivity Analysis</div><div class="cs-def">Shows how NPV changes when one critical variable changes — tests robustness</div></div>
+          <div class="cs-term-row"><div class="cs-term">Break-even Analysis</div><div class="cs-def">How many units must be sold for NPV = $0 — minimum viable scale</div></div>
+          <div class="cs-term-row"><div class="cs-term">Monte Carlo Simulation</div><div class="cs-def">Models all possible outcomes with probabilities and correlations — gives a distribution of NPVs</div></div>
+        </div>
+      </div>
+
+      <!-- VALUE CREATION -->
+      <div class="cs-panel">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#7b5ea7"></div><div class="cs-panel-title">Value Creation & Stock Market</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-term-row"><div class="cs-term">Value (of a firm)</div><div class="cs-def">The most an investor should pay — calculated as PV of all future free cash flows</div></div>
+          <div class="cs-term-row"><div class="cs-term">ROIC</div><div class="cs-def">Return on Invested Capital — the return a company earns on its invested capital. Must exceed WACC to create value</div></div>
+          <div class="cs-term-row"><div class="cs-term">Free Cash Flow</div><div class="cs-def">Cash available to return to investors (dividends, debt payments, buybacks) after capital expenditures</div></div>
+          <div class="cs-term-row"><div class="cs-term">CAPEX</div><div class="cs-def">Capital Expenditures — money spent to fund growth activities (new factories, equipment, acquisitions)</div></div>
+          <div class="cs-term-row"><div class="cs-term">Investment Rate</div><div class="cs-def">Fraction of cash flow reinvested into the business = Growth Rate / ROIC</div></div>
+          <div class="cs-term-row"><div class="cs-term">Value Innovation</div><div class="cs-def">Simultaneously pursuing radically superior value for buyers AND lower costs for the company</div></div>
+          <div class="cs-term-row"><div class="cs-term">Bolt-on Acquisition</div><div class="cs-def">Small company acquired and easily integrated into parent — a common growth lever</div></div>
+          <div class="cs-term-row"><div class="cs-term">Market Cap</div><div class="cs-def">A company's total market value = Price per Share × Shares Outstanding</div></div>
+          <div class="cs-term-row"><div class="cs-term">TRS</div><div class="cs-def">Total Return to Shareholders — stock price appreciation + dividends, expressed as annualized rate</div></div>
+          <div class="cs-term-row"><div class="cs-term">Share Repurchase</div><div class="cs-def">Company buys back its own shares, reducing shares outstanding → immediately boosts stock price</div></div>
+          <div class="cs-term-row"><div class="cs-term">Expectations Treadmill</div><div class="cs-def">Analysts set higher targets over time — company must keep exceeding them to maintain stock price</div></div>
+          <div class="cs-term-row"><div class="cs-term">Short-termism</div><div class="cs-def">Dangerous focus on short-run results at the expense of long-term value creation</div></div>
+        </div>
+      </div>
+
+      <!-- KEY ACRONYMS -->
+      <div class="cs-panel full-width">
+        <div class="cs-panel-header"><div class="cs-panel-dot" style="background:#3d8bcd"></div><div class="cs-panel-title">Key Acronyms Quick Reference</div></div>
+        <div class="cs-panel-body">
+          <div class="cs-formula-grid">
+            <div>
+              <table class="cs-table">
+                <thead><tr><th>Acronym</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td>NPV</td><td>Net Present Value — core investment decision metric</td></tr>
+                  <tr><td>IRR</td><td>Internal Rate of Return — discount rate where NPV = $0</td></tr>
+                  <tr><td>PV / FV</td><td>Present Value / Future Value</td></tr>
+                  <tr><td>WACC</td><td>Weighted Average Cost of Capital</td></tr>
+                  <tr><td>CAPM</td><td>Capital Asset Pricing Model — estimates cost of equity</td></tr>
+                  <tr><td>DCF</td><td>Discounted Cash Flow — valuation methodology</td></tr>
+                  <tr><td>ROIC</td><td>Return on Invested Capital</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <table class="cs-table">
+                <thead><tr><th>Acronym</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td>FCFE</td><td>Free Cash Flow to Equity</td></tr>
+                  <tr><td>FCFF</td><td>Free Cash Flow to the Firm</td></tr>
+                  <tr><td>CAPEX</td><td>Capital Expenditures</td></tr>
+                  <tr><td>AWC / NWC</td><td>Net Working Capital</td></tr>
+                  <tr><td>TRS</td><td>Total Return to Shareholders</td></tr>
+                  <tr><td>D/E Ratio</td><td>Debt-to-Equity Ratio</td></tr>
+                  <tr><td>YTM</td><td>Yield to Maturity</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end cheatsheet -->
+
+</div><!-- end main -->
+
+<script>
+const CARDS = [
+  // TIME VALUE OF MONEY
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is the Time Value of Money?', a:'Money in the present is worth more than the same amount in the future, because today\'s money can be invested to earn a return.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is the difference between Present Value and Future Value?', a:'Present Value (PV) is what a future sum is worth today — it moves money backward in time. Future Value (FV) is what a current sum will be worth at a future date — it moves money forward in time.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is Compounding, and what does it calculate?', a:'Compounding is the process of moving money forward in time — it multiplies a sum by (1 + r)ⁿ to find its future value. It increases the value of a sum of money.', formula:'FV = C₀ × (1 + r)ⁿ' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is Discounting, and what does it calculate?', a:'Discounting is the process of moving money backward in time — it divides a future sum by (1 + r)ⁿ to find its present value. It decreases the value of a sum of money.', formula:'PV = Cₙ / (1 + r)ⁿ' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is Net Present Value (NPV)?', a:'The difference between the present value of all cash inflows (benefits) and present value of all cash outflows (costs) of an investment. A positive NPV means the investment creates value.', formula:'NPV = PV(inflows) − PV(outflows)' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What does a positive NPV indicate?', a:'That the present value of cash inflows exceeds the present value of cash outflows — the investment generates more value than it costs. The firm should invest.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is a timeline in TVM, and what are the sign conventions?', a:'A visual tool for mapping cash flows over time. Inflows of cash are positive numbers and outflows are negative numbers. All periods on the timeline must be equal in length.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'What is an Ordinary Annuity vs. an Annuity Due?', a:'Ordinary annuity: fixed payments made at the END of each period (most common). Annuity due: fixed payments made at the BEGINNING of each period.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'In NPV calculations, what is the discount rate typically set equal to?', a:'The opportunity cost of capital — the return an investor could earn from another investment with the same level of risk. Often set equal to WACC.' },
+  { mod:'tvm', modLabel:'Time Value of Money', q:'How do you combine multiple cash flows on a timeline?', a:'All cash flows must first be moved to the same point in time (either all to PV or all to FV) before they can be added or compared. You cannot add cash flows from different time periods directly.' },
+
+  // CORPORATE FINANCE
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is Corporate Finance?', a:'The discipline concerned with sourcing funds for a corporation and allocating those funds over the short- and long-term to maximize shareholder wealth.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is the primary financial goal of a firm?', a:'To increase shareholder wealth — the present value of all future economic benefits less the cost of assets owned by the entity.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What are the roles of the CFO and Financial Analyst?', a:'CFO: heads all financial functions, manages risk, and develops forward-looking financial strategy. Financial Analyst: gathers and analyzes financial data to provide management with reports and recommendations.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is a Capital Market?', a:'A financial market where corporations, securities dealers, and treasury departments trade financial instruments to obtain the funding needed for long-term growth.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is the difference between the Primary Market and Secondary Market?', a:'Primary market: institutional investors buy new securities directly from corporations (e.g., at an IPO). Secondary market: shareholders trade existing shares with other investors (e.g., NYSE, NASDAQ).' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is Risk in financial management, and what are the three steps of risk identification?', a:'Risk is the probability of deviation from an anticipated outcome. The three steps: (1) Developing awareness, (2) Beginning measurement, (3) Making adjustments.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is a Risk Threshold, and what must it be balanced against?', a:'The amount of risk a firm will tolerate over a time horizon. It must be balanced against materiality — the costs and benefits of devoting resources to managing that specific risk.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What is a SWOT Analysis?', a:'A strategic planning framework assessing a company\'s Strengths, Weaknesses, Opportunities, and Threats — used to evaluate competitive position and internal/external environment.' },
+  { mod:'corp', modLabel:'Corporate Finance', q:'What are SMART goals in strategic planning?', a:'Goals that are Specific, Measurable, Achievable, Relevant, and Timely — the standard framework for effective business objective-setting.' },
+
+  // COST OF CAPITAL & WACC
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is the Cost of Debt?', a:'The effective interest rate a company pays on its borrowed capital. Before-tax cost = Interest Expense / Debt. Interest is tax-deductible, so the after-tax cost is lower.', formula:'C_at = C_bt × (1 − T)' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'Why is interest tax-deductible but dividends are not?', a:'Interest payments on debt reduce taxable income (creating a tax shield), lowering the true cost of debt. Dividends are paid from after-tax profits and receive no such deduction.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is the Cost of Equity, and why is it higher than the Cost of Debt?', a:'The minimum return stockholders demand before investing. It\'s higher than debt because equity returns are less predictable (no fixed payments), making it riskier for investors.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is CAPM, and what are its three inputs?', a:'The Capital Asset Pricing Model estimates cost of equity using: (1) Risk-free rate (r_f), (2) Expected market return (r_m), and (3) Beta (β — stock volatility relative to market).', formula:'Rₑ = r_f + β × (r_m − r_f)' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What does Beta (β) measure in CAPM?', a:'A stock\'s volatility relative to the overall market. β = 1 means same volatility as market; β > 1 = more volatile; β < 1 = less volatile. Higher β → higher required return.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is WACC, and what does it represent?', a:'Weighted Average Cost of Capital — a company\'s cost of capital weighted by the proportion of debt and equity in its capital structure. It\'s the minimum return the company must earn to satisfy all investors.', formula:'WACC = (Wₑ×Rₑ) + (W_d×R_d×(1−T))' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What does it mean if a company\'s ROIC is greater than WACC?', a:'The company is creating value — it earns more from its invested capital than it costs to finance that capital. If ROIC < WACC, the company is destroying value.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is the Tax Shield in capital structure?', a:'The reduction in tax expense that results from deducting interest payments. More debt → larger tax shield → lower WACC (up to the point where distress costs exceed the benefit).' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What are Distress Costs?', a:'Costs that arise when a firm has too much debt and faces financial difficulty — higher cost of capital, reduced customer base, loss of key employees, and legal/restructuring costs.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'State the three Modigliani-Miller propositions and their key conclusions.', a:'(1) No taxes: capital structure is irrelevant — D/E ratio doesn\'t affect firm value. (2) With taxes: maximize debt for maximum firm value (greatest tax shield). (3) Taxes + bankruptcy: optimal structure is where weighted cost of debt = weighted cost of equity.' },
+  { mod:'wacc', modLabel:'Cost of Capital & WACC', q:'What is the difference between a Levered and Unlevered firm?', a:'Levered (geared): funded by a mix of equity and debt. Unlevered (ungeared): funded solely by equity. Levered firms benefit from the tax shield but face distress cost risk.' },
+
+  // CAPITAL BUDGETING
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is Capital Budgeting?', a:'Using discounted cash flow (DCF) analysis to determine which long-term investments are the best use of a company\'s capital, in order to increase shareholder wealth.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is the NPV Rule for capital budgeting?', a:'Invest in all independent projects with a positive NPV. If projects are mutually exclusive (can only pick one), invest in the project with the highest NPV.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is IRR (Internal Rate of Return)?', a:'The discount rate that makes NPV exactly equal to $0. If IRR is above the required rate of return, the NPV is positive. If below, NPV is negative. NPV rule is preferred for mutually exclusive projects.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is the Payback Period and its key weakness?', a:'The amount of time required for a project to recoup its initial investment. Key weakness: it ignores the time value of money and cash flows that occur after the payback date.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'Why are Sunk Costs irrelevant to capital budgeting?', a:'Sunk costs are past costs that cannot be recovered. Since they are unaffected by the investment decision going forward, they should never be included in NPV calculations.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is the difference between Marginal and Incremental Cash Flows?', a:'Marginal cash flows: future cash flows resulting from moving forward with the project. Incremental cash flows: those that occur only if the project is chosen. Only incremental flows are relevant to NPV.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'How should Depreciation be treated in project cash flow analysis?', a:'Include depreciation to calculate the tax expense (it reduces taxable income), then add it back as a non-cash item to get net cash flow. Depreciation itself is not a cash outflow.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is Sensitivity Analysis in capital budgeting?', a:'A technique that shows how NPV changes when one critical input variable (e.g., sales price, cost, growth rate) is changed while holding others constant. Tests which assumptions matter most.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is a Monte Carlo Simulation?', a:'A computational technique that models all possible outcomes of a project by assigning probability distributions to each critical variable and simulating thousands of scenarios to produce a distribution of NPVs.' },
+  { mod:'budget', modLabel:'Capital Budgeting', q:'What is Salvage Value in a capital budgeting project?', a:'The estimated resale value of a project\'s property, plant, and equipment at the end of its useful life. It is treated as a cash inflow in the final period of the project\'s timeline.' },
+
+  // VALUE CREATION
+  { mod:'value', modLabel:'Value Creation', q:'How is the Value of a firm calculated?', a:'Value equals the present value of all future free cash flows discounted at the cost of capital (WACC). The riskier the business, the higher the cost of capital, and therefore the lower the value.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is ROIC, and why does it matter relative to WACC?', a:'Return on Invested Capital — the return a company earns on its invested capital. If ROIC > WACC, the company creates value. If ROIC < WACC, the company destroys value.' },
+  { mod:'value', modLabel:'Value Creation', q:'What are the two categories of cash flows for a company?', a:'(1) Capital Expenditures (CAPEX): money reinvested to fund growth. (2) Free Cash Flow: cash available to return to investors through dividends, debt repayments, and share buybacks.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is the Investment Rate, and how is it calculated?', a:'The percentage of cash flow a company reinvests back into the business. Investment Rate = Growth Rate / ROIC. Higher growth requires higher reinvestment.', formula:'Investment Rate = Growth Rate / ROIC' },
+  { mod:'value', modLabel:'Value Creation', q:'What is Total Return to Shareholders (TRS)?', a:'The total return investors receive, calculated from stock price appreciation plus dividends, expressed as an annualized rate of return.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is Market Capitalization?', a:'The total market value of a company, calculated as: Price per Share × Number of Shares Outstanding. A share repurchase reduces shares outstanding and immediately increases stock price.', formula:'Market Cap = Price × Shares Outstanding' },
+  { mod:'value', modLabel:'Value Creation', q:'What is the Expectations Treadmill?', a:'The phenomenon where analysts set increasingly aggressive performance targets for a company. To maintain its stock price, the company must continuously exceed these rising expectations — a difficult and dangerous dynamic.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is Value Innovation?', a:'A growth strategy that simultaneously pursues radically superior value for buyers AND lower costs for the company — enabling the firm to create new market demand rather than just competing in existing markets.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is a Bolt-on Acquisition?', a:'The acquisition of a small company that can be easily integrated into the parent company. A common lever for growth, particularly when organic growth slows.' },
+  { mod:'value', modLabel:'Value Creation', q:'What is Shared Value?', a:'Value created for both shareholders and a broader set of stakeholders — recognizing that long-term shareholder value and societal benefit are complementary rather than competing goals.' },
+];
+
+const QUIZ_Q = [
+  // TVM
+  { mod:'Time Value of Money', q:'The process of moving money forward in time to find its future value is called:', opts:['Discounting','Amortizing','Compounding','Annuitizing'], ans:2 },
+  { mod:'Time Value of Money', q:'Which formula correctly calculates Present Value?', opts:['PV = C₀ × (1+r)ⁿ','PV = Cₙ / (1+r)ⁿ','PV = Cₙ × (1+r)ⁿ','PV = C₀ / (1−r)ⁿ'], ans:1 },
+  { mod:'Time Value of Money', q:'A positive NPV on an investment indicates:', opts:['The project will definitely succeed','PV of inflows exceeds PV of outflows — the investment creates value','The IRR is below the required rate of return','Payback period is less than one year'], ans:1 },
+  { mod:'Time Value of Money', q:'On a cash flow timeline, outflows are represented as:', opts:['Positive numbers','Neutral values','Negative numbers','Annuity payments'], ans:2 },
+  { mod:'Time Value of Money', q:'An annuity due differs from an ordinary annuity because payments are made:', opts:['Over a longer time period','At the beginning of each period rather than the end','At irregular intervals','Only once per year'], ans:1 },
+  { mod:'Time Value of Money', q:'The discount rate in NPV calculations is typically set equal to:', opts:['The risk-free rate only','The inflation rate','The opportunity cost of capital (often WACC)','The payback period'], ans:2 },
+  { mod:'Time Value of Money', q:'To compare multiple cash flows on a timeline, you must first:', opts:['Add them directly regardless of timing','Convert them all to the same point in time','Divide each by the number of periods','Multiply each by beta'], ans:1 },
+
+  // CORPORATE FINANCE
+  { mod:'Corporate Finance', q:'The primary financial goal of a corporation is to:', opts:['Maximize annual accounting profit','Minimize all forms of risk','Increase shareholder wealth','Achieve the highest possible revenue'], ans:2 },
+  { mod:'Corporate Finance', q:'Which market is where corporations issue new securities to institutional investors for the first time?', opts:['Secondary market','Derivatives market','Primary market','Money market'], ans:2 },
+  { mod:'Corporate Finance', q:'The CFO\'s primary responsibilities include:', opts:['Managing marketing campaigns and pricing strategy','Directing fiscal functions, managing risk, and developing financial strategy','Setting production quotas and supply chain targets','Overseeing HR and talent acquisition'], ans:1 },
+  { mod:'Corporate Finance', q:'A Risk Threshold must be balanced against:', opts:['The company\'s market capitalization','Materiality — the cost-benefit of managing the risk','The IRR of current projects','The company\'s beta coefficient'], ans:1 },
+  { mod:'Corporate Finance', q:'SMART goals in strategic planning stand for:', opts:['Strategic, Meaningful, Actionable, Relevant, Timely','Specific, Measurable, Achievable, Relevant, Timely','Simple, Manageable, Attainable, Realistic, Time-bound','Systematic, Measurable, Aggressive, Resourced, Targeted'], ans:1 },
+
+  // COST OF CAPITAL & WACC
+  { mod:'Cost of Capital & WACC', q:'Why is the after-tax cost of debt lower than the before-tax cost?', opts:['Debt is always cheaper than equity','Interest payments are tax-deductible, reducing the effective cost','The Fed subsidizes corporate borrowing','Credit risk disappears after taxes are paid'], ans:1 },
+  { mod:'Cost of Capital & WACC', q:'In the CAPM formula Rₑ = r_f + β × (r_m − r_f), what does β measure?', opts:['The company\'s debt-to-equity ratio','The risk-free rate of return','A stock\'s volatility relative to the overall market','The expected dividend yield'], ans:2 },
+  { mod:'Cost of Capital & WACC', q:'A company must earn a return greater than its WACC in order to:', opts:['Avoid bankruptcy','Create value for shareholders (ROIC > WACC)','Qualify for government contracts','Issue new equity shares'], ans:1 },
+  { mod:'Cost of Capital & WACC', q:'The Tax Shield in capital structure refers to:', opts:['A legal protection against hostile takeovers','The reduction in taxes from deducting interest payments on debt','A government tax credit for R&D spending','Exemption from capital gains tax on reinvested profits'], ans:1 },
+  { mod:'Cost of Capital & WACC', q:'Under Modigliani-Miller WITH taxes (and no distress costs), firm value is maximized when:', opts:['Debt and equity are split 50/50','The firm is entirely equity-financed','The debt-to-equity ratio is as high as possible','WACC equals the risk-free rate'], ans:2 },
+  { mod:'Cost of Capital & WACC', q:'What is a levered (geared) firm?', opts:['A firm funded solely by equity','A firm funded by a mix of equity and debt','A firm with no long-term liabilities','A firm with a beta greater than 1'], ans:1 },
+  { mod:'Cost of Capital & WACC', q:'The risk-free rate used in CAPM is typically equated to:', opts:['The prime lending rate of commercial banks','The return on S&P 500 over 10 years','The yield on US Treasury bonds','The Fed Funds Rate minus inflation'], ans:2 },
+
+  // CAPITAL BUDGETING
+  { mod:'Capital Budgeting', q:'The NPV Rule for mutually exclusive projects states:', opts:['Invest in all projects with positive NPV','Reject all projects — only use IRR','Choose the project with the highest NPV','Choose the project with the shortest payback period'], ans:2 },
+  { mod:'Capital Budgeting', q:'The IRR of a project is best defined as:', opts:['The average annual return on the project','The discount rate that makes NPV exactly equal to zero','The rate of return required by investors','The project\'s payback period expressed as a rate'], ans:1 },
+  { mod:'Capital Budgeting', q:'Why are sunk costs excluded from NPV calculations?', opts:['They are too uncertain to estimate','They are tax-deductible and thus offset gains','They are past, unrecoverable costs unaffected by the investment decision','They are included in salvage value instead'], ans:2 },
+  { mod:'Capital Budgeting', q:'Which capital budgeting weakness does the Payback Period have that NPV does not?', opts:['It requires knowledge of the discount rate','It ignores the time value of money and post-payback cash flows','It cannot handle negative cash flows','It over-weights distant cash flows'], ans:1 },
+  { mod:'Capital Budgeting', q:'Depreciation is added BACK in project cash flow analysis because:', opts:['It represents a tax benefit that increases revenue','It is a non-cash expense that was only included to calculate the tax impact','It increases the salvage value of the project','It reduces the discount rate used in NPV'], ans:1 },
+  { mod:'Capital Budgeting', q:'Sensitivity analysis in capital budgeting is used to:', opts:['Calculate the exact NPV of the project','Determine which critical variable has the biggest impact on NPV','Simulate thousands of random outcomes','Find the payback period under optimistic assumptions'], ans:1 },
+
+  // VALUE CREATION
+  { mod:'Value Creation', q:'A company\'s value is calculated as the present value of:', opts:['All accounting profits discounted by the P/E ratio','Future free cash flows discounted at the cost of capital','Total assets minus total liabilities','Revenue minus WACC multiplied by invested capital'], ans:1 },
+  { mod:'Value Creation', q:'If a company\'s ROIC is 8% and its WACC is 11%, the company is:', opts:['Creating shareholder value','Destroying shareholder value, since it earns less than it costs to finance','Operating at the optimal capital structure','Generating a healthy tax shield'], ans:1 },
+  { mod:'Value Creation', q:'Investment Rate is calculated as:', opts:['Free cash flow divided by CAPEX','ROIC divided by growth rate','Growth Rate divided by ROIC','Net income divided by total equity'], ans:2 },
+  { mod:'Value Creation', q:'A share repurchase by a company immediately:', opts:['Increases total equity outstanding','Reduces shares outstanding, increasing stock price','Decreases the company\'s WACC','Raises the dividend yield'], ans:1 },
+  { mod:'Value Creation', q:'The Expectations Treadmill describes the risk that:', opts:['Analysts undervalue companies with high ROIC','Management must continually exceed rising analyst targets just to maintain stock price','Shareholders reject dividend payments in favor of buybacks','The cost of equity rises as the firm grows'], ans:1 },
+  { mod:'Value Creation', q:'Which of the following best describes Value Innovation?', opts:['Cutting costs to match the lowest-price competitor','Simultaneously achieving superior value for buyers AND lower costs for the company','Acquiring competitors to reduce market rivalry','Raising prices to signal superior quality'], ans:1 },
+];
+
+// ═══ STATE ═══
+let currentMode = 'flashcard';
+let activeModule = 'all';
+let filteredCards = [...CARDS];
+let cardIndex = 0;
+let isFlipped = false;
+let quizCards = [], quizIndex = 0, quizScore = 0, quizWrong = [], quizN = 10, answered = false;
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.mode-btn[onclick*="${mode}"]`).classList.add('active');
+  document.getElementById('flashcard-view').style.display = mode === 'flashcard' ? 'block' : 'none';
+  document.getElementById('quiz-view').style.display = mode === 'quiz' ? 'block' : 'none';
+  document.getElementById('cheatsheet-view').style.display = mode === 'cheatsheet' ? 'block' : 'none';
+  document.getElementById('moduleBar').style.display = mode === 'cheatsheet' ? 'none' : 'flex';
+  if (mode === 'flashcard') renderCard();
+}
+
+function toggleModule(btn, mod) {
+  document.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  activeModule = mod;
+  filteredCards = mod === 'all' ? [...CARDS] : CARDS.filter(c => c.mod === mod);
+  cardIndex = 0; isFlipped = false;
+  document.getElementById('card3d').classList.remove('flipped');
+  renderCard();
+}
+
+function renderCard() {
+  if (!filteredCards.length) return;
+  const c = filteredCards[cardIndex];
+  document.getElementById('fcModule').textContent = c.modLabel;
+  document.getElementById('fcQuestion').textContent = c.q;
+  document.getElementById('fcAnswer').textContent = c.a;
+  const fEl = document.getElementById('fcFormula');
+  if (c.formula) { fEl.style.display = 'inline-block'; fEl.textContent = c.formula; }
+  else { fEl.style.display = 'none'; }
+  document.getElementById('fcHint').textContent = isFlipped ? 'Tap to see question' : 'Tap to reveal answer';
+  document.getElementById('fcProgressFill').style.width = ((cardIndex + 1) / filteredCards.length * 100).toFixed(0) + '%';
+  document.getElementById('fcCounter').textContent = `Card ${cardIndex + 1} of ${filteredCards.length}`;
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('card3d').classList.toggle('flipped', isFlipped);
+  document.getElementById('fcHint').textContent = isFlipped ? 'Tap to see question' : 'Tap to reveal answer';
+}
+
+function nextCard() {
+  cardIndex = (cardIndex + 1) % filteredCards.length;
+  isFlipped = false;
+  document.getElementById('card3d').classList.remove('flipped');
+  setTimeout(renderCard, 50);
+}
+
+function prevCard() {
+  cardIndex = (cardIndex - 1 + filteredCards.length) % filteredCards.length;
+  isFlipped = false;
+  document.getElementById('card3d').classList.remove('flipped');
+  setTimeout(renderCard, 50);
+}
+
+function shuffleCards() {
+  for (let i = filteredCards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filteredCards[i], filteredCards[j]] = [filteredCards[j], filteredCards[i]];
+  }
+  cardIndex = 0; isFlipped = false;
+  document.getElementById('card3d').classList.remove('flipped');
+  renderCard();
+}
+
+function selectN(btn) {
+  document.querySelectorAll('.config-chip').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  quizN = btn.dataset.n === 'all' ? QUIZ_Q.length : parseInt(btn.dataset.n);
+}
+
+function startQuiz() {
+  let pool = [...QUIZ_Q];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  quizCards = pool.slice(0, quizN === QUIZ_Q.length ? pool.length : quizN);
+  quizIndex = 0; quizScore = 0; quizWrong = []; answered = false;
+  document.getElementById('quizStart').style.display = 'none';
+  document.getElementById('quizResults').style.display = 'none';
+  document.getElementById('quizBlock').style.display = 'block';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = quizCards[quizIndex];
+  answered = false;
+  document.getElementById('quizNum').textContent = `Question ${quizIndex + 1} of ${quizCards.length}`;
+  document.getElementById('quizScoreBadge').textContent = `Score: ${quizScore}`;
+  document.getElementById('qModuleTag').textContent = q.mod;
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('quizProgressFill').style.width = (quizIndex / quizCards.length * 100).toFixed(0) + '%';
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const labels = ['A','B','C','D'];
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-label">${labels[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, q);
+    grid.appendChild(btn);
+  });
+  document.getElementById('quizFeedback').className = 'quiz-feedback';
+  document.getElementById('quizFeedback').textContent = '';
+  document.getElementById('btnNextQ').className = 'btn-next-q';
+  document.getElementById('btnNextQ').textContent = quizIndex < quizCards.length - 1 ? 'Next Question →' : 'See Results →';
+}
+
+function selectAnswer(i, q) {
+  if (answered) return;
+  answered = true;
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true);
+  const correct = i === q.ans;
+  btns[i].classList.add(correct ? 'correct' : 'wrong');
+  if (!correct) btns[q.ans].classList.add('correct');
+  const fb = document.getElementById('quizFeedback');
+  fb.className = 'quiz-feedback show ' + (correct ? 'correct' : 'wrong');
+  if (correct) { quizScore++; fb.textContent = '✓ Correct! ' + (q.explain || ''); }
+  else { fb.innerHTML = '✗ Incorrect. Correct answer: <strong>' + q.opts[q.ans] + '</strong>' + (q.explain ? ' — ' + q.explain : ''); quizWrong.push(q); }
+  document.getElementById('quizScoreBadge').textContent = `Score: ${quizScore}`;
+  document.getElementById('btnNextQ').classList.add('show');
+}
+
+function nextQuestion() {
+  quizIndex++;
+  if (quizIndex >= quizCards.length) showResults();
+  else renderQuestion();
+}
+
+function showResults() {
+  document.getElementById('quizBlock').style.display = 'none';
+  const results = document.getElementById('quizResults');
+  results.style.display = 'block';
+  const pct = Math.round(quizScore / quizCards.length * 100);
+  document.getElementById('resultsPct').textContent = pct + '%';
+  const grade = pct >= 90 ? '🏆 Excellent!' : pct >= 75 ? '👍 Good work!' : pct >= 60 ? '📚 Keep studying!' : '💪 Review and try again!';
+  document.getElementById('resultsLabel').textContent = `${quizScore} of ${quizCards.length} correct — ${grade}`;
+  document.getElementById('resultsBreakdown').innerHTML = `
+    <div class="result-chip"><div class="result-chip-num" style="color:#6ddb9a">${quizScore}</div><div class="result-chip-lbl">Correct</div></div>
+    <div class="result-chip"><div class="result-chip-num" style="color:#f08080">${quizCards.length-quizScore}</div><div class="result-chip-lbl">Incorrect</div></div>
+    <div class="result-chip"><div class="result-chip-num">${pct}%</div><div class="result-chip-lbl">Score</div></div>`;
+  const rev = document.getElementById('reviewSection');
+  if (quizWrong.length > 0) {
+    rev.innerHTML = `<h3 style="color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;">Review (${quizWrong.length} missed)</h3><div class="review-list">` +
+      quizWrong.map(q => `<div class="review-item"><div class="review-item-q">${q.q}</div><div class="review-item-a">✓ ${q.opts[q.ans]}</div></div>`).join('') + '</div>';
+  } else {
+    rev.innerHTML = `<p style="color:#6ddb9a;margin-bottom:24px;">🎉 Perfect score! Nothing to review.</p>`;
+  }
+}
+
+function retakeQuiz() {
+  document.getElementById('quizResults').style.display = 'none';
+  document.getElementById('quizStart').style.display = 'block';
+}
+
+setMode('flashcard');
+</script>
+</body>
+</html>
